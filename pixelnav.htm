@@ -14,10 +14,15 @@
         canvas {
             border: 2px solid black;
             position: absolute;
+            background-color: transparent;
+        }
+        canvas.mainview {
             left: 30px;
             top: 100px;
-            background-color: transparent;
-            .background-image: url("images/bg.png");
+        }
+        canvas.sideview {
+            left: 660px;
+            top: 100px;
         }
         div {
             position:absolute;
@@ -29,8 +34,9 @@
   <body>
     Move with the arrow keys<br />
     Mouseover a color to show the color in the background (for debugging purposes)<br />
-    <canvas id="environment" width="600" height="400" style=></canvas>
-    <canvas id="game" width="600" height="400" style=></canvas>
+    <canvas class="mainview" id="environment" width="600" height="400" style=></canvas>
+    <canvas class="mainview" id="game" width="600" height="400" style=></canvas>
+    <canvas class="sideview" id="zoom" width="400" height="400" style=></canvas>
   </body>
   
   <script id=utility>
@@ -306,8 +312,10 @@
     
     player = {
       id: "player",
+      ctx: document.getElementById("game").getContext("2d"),
       pos: xy(300, 200),
       speed: 5,
+      display: {radius: 6, color1: 'black', color2: 'white'},
       //default_speed: 10,
       //speeds: {'left': 10, 'right': 10, 'up': 10,  'down': 10},
       navigation: [],
@@ -347,20 +355,53 @@
       },
       draw: function() {
         // Black dot with white smiley face
-        ctx.fillStyle = 'black';
-        ctx.strokeStyle = 'black';
-        circle(ctx, this.pos, 6);
-        ctx.fillStyle = 'white';
-        circle(ctx, add(this.pos, xy(-2, -2)), 1.5);
-        circle(ctx, add(this.pos, xy(2, -2)), 1.5);
-        ctx.closePath();
-        ctx.beginPath();
-        ctx.arc(this.pos.x, this.pos.y + 1, 2.5, 0, Math.PI);
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
+        var r = this.display.radius;
+        this.ctx.fillStyle = this.display.color1;
+        this.ctx.strokeStyle = this.display.color1;
+        circle(this.ctx, this.pos, r);
+        this.ctx.fillStyle = this.display.color2;
+        circle(this.ctx, add(this.pos, xy(-r/3, -r/3)), r/4);
+        circle(this.ctx, add(this.pos, xy(r/3, -r/3)), r/4);
+        this.ctx.closePath();
+        this.ctx.beginPath();
+        this.ctx.arc(this.pos.x, this.pos.y + r/6, r/2.5, 0, Math.PI);
+        this.ctx.strokeStyle = this.display.color2;
+        this.ctx.stroke();
       }
     }
     game.objects.push(player);
+  
+    zoomview = {
+      id: "zoomview",
+      ctx: document.getElementById("zoom").getContext("2d"),
+      zoomfactor: 10,
+      tick: function() {},
+      draw: function() {
+        var center = add(environment.pos, player.pos);
+        
+        // DRAW THE IMAGE
+        // output params (on the zoomed canvas)
+        var w = this.ctx.canvas.width;
+        var h = this.ctx.canvas.height;
+        var x = -w/2;
+        var y = -h/2;
+        // input params (on the image)
+        var sw = w / this.zoomfactor;
+        var sh = h / this.zoomfactor;
+        var sx = center.x - sw/2;
+        var sy = center.y - sh/2;
+        // draw the image
+        this.ctx.drawImage(environment.img, sx, sy, sw, sh, x, y, w, h);
+        
+        // DRAW THE PLAYER
+        this.ctx.strokeStyle = 'black';
+        this.ctx.fillStyle = 'transparent';
+        circle(this.ctx, xy(0, 0), player.display.radius * this.zoomfactor);
+        
+      }
+    }
+    zoomview.ctx.translate(zoomview.ctx.canvas.width/2, zoomview.ctx.canvas.height/2);
+    game.objects.push(zoomview);
     
   </script>
   
