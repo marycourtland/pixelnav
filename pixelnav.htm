@@ -289,6 +289,7 @@
       getPixel: function(pos) {
         //pos = add(pos, this.pos);
         //console.log("Getting the images pixel at " + pos);
+        pos = vround(pos);
         var imd = this.ctx.getImageData(0, 0, game.size.x, game.size.y);
         var index = 4 * ((pos.y * game.size.x) + pos.x);
         var rgba = [];
@@ -306,10 +307,11 @@
     player = {
       id: "player",
       pos: xy(300, 200),
-      default_speed: 10,
-      speeds: {'left': 10, 'right': 10, 'up': 10,  'down': 10},
+      speed: 5,
+      //default_speed: 10,
+      //speeds: {'left': 10, 'right': 10, 'up': 10,  'down': 10},
       navigation: [],
-      checkEdge: function() {
+      checkForCameraEdge: function() {
         var xshift = 0;
         var yshift = 0;
         if (this.pos.x < camera_edge_width) xshift = this.pos.x - camera_edge_width;
@@ -323,35 +325,24 @@
       },
       move: function(delta) {
         this.pos.add(delta);
-        this.pos.round();
-        this.checkEdge();
-        this.updateSpeeds();
+        this.checkForCameraEdge();
       },
-      getSpeedInDir: function(delta) {
-        var radius = 3;
+      canMoveInDir: function(delta) {
+        var color_tolerance = 10;
         var current_pixel = environment.getPixel(this.pos);
-        return Math.max(0, this.default_speed - 2*colorDiff(current_pixel, environment.getPixel(add(scale(delta, radius), this.pos))))
-      },
-      updateSpeeds: function() {
-        // Set speeds to be dependent on the average color difference in each direction
-        var radius = 10;
-        var current_pixel = environment.getPixel(this.pos);
-        
-        for (var dir in this.speeds) {
-          var sum = 0;
-          var pos = scale(dirs[dir], radius);
-          this.speeds[dir] = Math.max(0, this.default_speed - colorDiff(current_pixel, environment.getPixel(add(pos, this.pos))));
-        }
+        var target_pos = add(delta, this.pos);
+        var color_diff = colorDiff(current_pixel, environment.getPixel(add(delta, this.pos)));
+        return color_diff < color_tolerance;
       },
       tick: function() {
         if (this.navigation.length == 0) return;
-        // Move it if the human player is pressing keys
+        // Move it if the human player is pressing keys (indicated by the navigation array)
         delta = xy(0, 0);
         for (var i=0; i < this.navigation.length; i++) {
           delta.add(dirs[this.navigation[i]]);
         }
-        delta.normalize(this.getSpeedInDir(delta));
-        this.move(delta);
+        delta.normalize(this.speed);
+        if (this.canMoveInDir(delta)) this.move(delta);
         
       },
       draw: function() {
@@ -492,7 +483,6 @@
         //menu();
         
         environment.redraw();
-        player.updateSpeeds();
         tick();
     }
   </script>
